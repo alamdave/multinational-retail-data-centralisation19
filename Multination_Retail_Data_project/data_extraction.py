@@ -9,11 +9,13 @@ class DataExtractor :
         return True
 
 
-
+#instantiate a data_extractor class
 data_extractor = DataExtractor()
+#instantiate a databaseconnector class from database_utils
 dbc = du.DatabaseConnector()
-
+#create a engine
 engine = dbc.init_db_engine()
 
-names = data_extractor.list_db_tables()
-print(names)
+with engine.connect() as conn:
+    #list tables
+    print(data_extractor.list_db_tables(conn))

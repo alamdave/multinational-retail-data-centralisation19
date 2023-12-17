@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 
 class DatabaseConnector:
     #Contructor method
-    def __init__(self, file_path):
+    def __init__(self):
         #YAML file containing the relevant information in order to connect to database
         self.file_path = 'db_creds.yaml'
     #Loads information from YAML file and loads information as a dictionary
