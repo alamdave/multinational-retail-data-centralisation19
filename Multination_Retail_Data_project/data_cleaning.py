@@ -1,2 +1,3 @@
 class DataCleaning:
-    pass
+    def clean_user_data():
+        pass
