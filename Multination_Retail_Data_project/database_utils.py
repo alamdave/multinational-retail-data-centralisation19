@@ -8,9 +8,13 @@ class DatabaseConnector:
         self.file_path = 'db_creds.yaml'
     #Loads information from YAML file and loads information as a dictionary
     def read_db_creds(self):
-        with open(self.file_path, 'r') as file:
-            data = yaml.safe_load(file)
-        return data
+        try:
+            with open(self.file_path, 'r') as file:
+                data = yaml.safe_load(file)
+            return data
+        except FileNotFoundError:
+            print(f"Error: The file '{self.file_path}' was not found.")
+            return None
     #Connects to the postgresql+psycopg2 using information given in YAML file and returns said connection as engine
     def init_db_engine(self):
         connection_info = self.read_db_creds()
