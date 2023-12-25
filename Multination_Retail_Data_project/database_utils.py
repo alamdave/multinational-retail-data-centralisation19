@@ -30,3 +30,5 @@ class DatabaseConnector:
         except Exception as e:
             print(f"Error connecting to the database: {e}")
             return None
+    def upload_to_db():
+        
