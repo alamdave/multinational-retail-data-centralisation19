@@ -1,10 +1,10 @@
-import database_utils as du
-import data_cleaning as dc
 from sqlalchemy import inspect
 import pandas as pd
+import tabula
+import requests
 
 class DataExtractor:
-    def __init__(self, engine, table_name='legacy_users'):
+    def __init__(self, engine=None, table_name='legacy_users'):
         # Instantiate a database connector class from database_utils
         self.table_name = table_name
         self.engine = engine
@@ -20,21 +20,31 @@ class DataExtractor:
         with self.engine.connect() as conn:
             df = pd.read_sql_table(self.table_name, conn)
             return df
+        
+    def retrieve_pdf_data(self, link):
+        dfs = tabula.read_pdf(link, pages='all', stream=True)
+        combined = pd.concat(dfs, ignore_index=True)
+        return combined
+    
+    def list_number_of_stores(self, url, headers):
+        response = requests.get(url=url,headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            return data['number_stores']
+        else:
+            print("NOPE")
 
-# Instantiate a database connector
-database_connection = du.DatabaseConnector()
+    def retrieve_store_data(self,url,store_number):
+        x = (f'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/store_details/{store_number}')
+        response = requests.get
+        pass
 
-# Load data from the database table 'legacy_users'
-load_db = DataExtractor(engine=database_connection.init_db_engine()).read_rds_table()
 
-# Instantiate a data cleaner
-data_cleaner = dc.DataCleaning(dataframe=load_db)
+new = DataExtractor()
+url = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/number_stores'
+headers = {'x-api-key':'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'}
 
-# Clean the user data
-clean_data = data_cleaner.clean_user_data()
+x = new.list_number_of_stores(url=url, headers=headers)
+print(x)
 
-# Connect to sales data database
-connect_to_sales_data = du.DatabaseConnector(file_path='sales_data_creds.yaml')
 
-# Upload cleaned data to the database table 'dim_users'
-connect_to_sales_data.upload_to_db(table=clean_data, table_name='dim_users')
