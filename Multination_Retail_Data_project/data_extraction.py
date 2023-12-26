@@ -1,36 +1,40 @@
 import database_utils as du
+import data_cleaning as dc
 from sqlalchemy import inspect
 import pandas as pd
-class DataExtractor :
-    def __init__(self):
-        #instantiate a databaseconnector class from database_utils
-        self.table_name = 'legacy_users'
-        self.database_con = du.DatabaseConnector()
-    #Loads information from YAML file and loads information as a dictionary
+
+class DataExtractor:
+    def __init__(self, engine, table_name='legacy_users'):
+        # Instantiate a database connector class from database_utils
+        self.table_name = table_name
+        self.engine = engine
+
+    # Loads information from YAML file and returns it as a dictionary
     def list_db_tables(self):
-        engine = self.database_con.init_db_engine()
-        with engine.connect() as conn:
-            inspector = inspect(engine)
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
             table_names = inspector.get_table_names()
             return table_names
-    
-    def read_rds_table(self):
-        engine = self.database_con.init_db_engine()
 
-        with engine.connect() as conn:
+    def read_rds_table(self):
+        with self.engine.connect() as conn:
             df = pd.read_sql_table(self.table_name, conn)
             return df
 
-#instantiate a data_extractor class
-#-data_extractor = DataExtractor()
-#selct the table names from the database and print them.
-#-user_table = data_extractor.list_db_tables()
-#-print(user_table)
+# Instantiate a database connector
+database_connection = du.DatabaseConnector()
 
-#slect the user table, "legacy_users", with the name user_table as a panda table
-#-user_data_panda = data_extractor.read_rds_table()
-#-print(user_data_panda)
-# Read the table into a pandas DataFrame
-#user_data_df = data_extractor.read_rds_table(dbc, user_data_table)
+# Load data from the database table 'legacy_users'
+load_db = DataExtractor(engine=database_connection.init_db_engine()).read_rds_table()
 
+# Instantiate a data cleaner
+data_cleaner = dc.DataCleaning(dataframe=load_db)
 
+# Clean the user data
+clean_data = data_cleaner.clean_user_data()
+
+# Connect to sales data database
+connect_to_sales_data = du.DatabaseConnector(file_path='sales_data_creds.yaml')
+
+# Upload cleaned data to the database table 'dim_users'
+connect_to_sales_data.upload_to_db(table=clean_data, table_name='dim_users')

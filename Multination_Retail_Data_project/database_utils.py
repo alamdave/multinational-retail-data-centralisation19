@@ -1,12 +1,15 @@
 import yaml
+import pandas as pd
 from sqlalchemy import create_engine
 
 class DatabaseConnector:
-    #Contructor method
-    def __init__(self):
-        #YAML file containing the relevant information in order to connect to database
-        self.file_path = 'db_creds.yaml'
-    #Loads information from YAML file and loads information as a dictionary
+    # Constructor method
+    def __init__(self, file_path='db_creds.yaml'):
+        # YAML file containing the relevant information to connect to the database
+        self.file_path = file_path
+        self.engine = self.init_db_engine()
+
+    # Loads information from YAML file and returns it as a dictionary
     def read_db_creds(self):
         try:
             with open(self.file_path, 'r') as file:
@@ -15,7 +18,8 @@ class DatabaseConnector:
         except FileNotFoundError:
             print(f"Error: The file '{self.file_path}' was not found.")
             return None
-    #Connects to the postgresql+psycopg2 using information given in YAML file and returns said connection as engine
+
+    # Connects to PostgreSQL using information from YAML file and returns the connection as an engine
     def init_db_engine(self):
         connection_info = self.read_db_creds()
         try:
@@ -25,10 +29,16 @@ class DatabaseConnector:
             user = connection_info.get('RDS_USER', '')
             password = connection_info.get('RDS_PASSWORD', '')
 
-            engine = create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}")
-            return engine.execution_options(isolation_level='AUTOCOMMIT')
+            # Creating a SQLAlchemy engine with the provided database credentials
+            engine = create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}", isolation_level='AUTOCOMMIT')
+            return engine
         except Exception as e:
             print(f"Error connecting to the database: {e}")
             return None
-    def upload_to_db():
-        
+
+    # Uploads a DataFrame to the database table
+    def upload_to_db(self, table, table_name):
+        with self.engine.connect() as conn:
+            # Using SQLAlchemy's to_sql method to upload the DataFrame to the specified table
+            table.to_sql(table_name, conn, if_exists='replace')
+            print("Uploaded!")
