@@ -9,6 +9,9 @@ class DatabaseConnector:
         self.file_path = file_path
         self.engine = self.init_db_engine()
 
+    def set_db(self, db):
+        pass
+    
     # Loads information from YAML file and returns it as a dictionary
     def read_db_creds(self):
         try:

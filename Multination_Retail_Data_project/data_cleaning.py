@@ -1,17 +1,20 @@
 import pandas as pd
 import numpy as np
+import main
 from dateutil.parser import parse
 from datetime import datetime
+
+import data_extraction as de
+import database_utils as du
 
 class DataCleaning:
     def __init__(self, dataframe=None):
         self.df = dataframe
+        
+    def set_data_frame(self, dataframe):
+        self.df = dataframe
 
-    def clean_user_data(self ):
-        # Display original DataFrame
-        print("Original DataFrame:")
-        print(self.df)
-
+    def clean_user_data(self):
         # Drop duplicate rows
         self.df['first_name'] = self.df['first_name'].astype(str)
         self.df['last_name'] = self.df['last_name'].astype(str)
@@ -54,13 +57,11 @@ class DataCleaning:
         self.df = self.df.reset_index(drop=True)
         self.df['index'] = self.df.index.astype('int32')
 
-        # Display cleaned DataFrame
-        print("\nCleaned DataFrame!")
         return self.df
 
     def clean_card_data(self):
-        # Remove duplicate and null columns
-        self.df = self.df.drop(self.df.columns[[5, 6]], axis=1)
+        #Drop NULL columns
+        self.df = self.df.drop(self.df.columns[[4, 5]], axis=1)
 
         # Create a Dictionary of card lengths for card providers
         digit_dictionary = {'16 digit': 16, '15 digit': 15, '13 digit': 13, '19 digit': 19, 'Diners Club / Carte Blanche': 14, 'Discover': 16, 'American Express': 15, 'Maestro': 12}
@@ -91,6 +92,20 @@ class DataCleaning:
         # Reset index and set datatype of 'index' to int32
         self.df = self.df.reset_index(drop=True)
         self.df['index'] = self.df.index.astype('int32')
-
-        print("\nCleaned Card Data!")
         return self.df
+    def clean_store_data(self):
+        print(self.df)
+
+        # Replace "N/A" and similar placeholders with NaN
+        self.df.replace(["N/A", "NULL", ""], pd.NA, inplace=True)
+                
+        
+if __name__ == "__main__":
+    sales_db_connector = du.DatabaseConnector(file_path="sales_data_creds.yaml")
+    #initiante instance of a cleaner
+    database_cleaner = DataCleaning()
+    #Database extractor instance
+    database_extractor = de.DataExtractor(engine=sales_db_connector.init_db_engine(), table_name='raw_store_data')
+    db = database_extractor.read_rds_table()
+    database_cleaner.set_data_frame(db)
+    database_cleaner.clean_store_data()

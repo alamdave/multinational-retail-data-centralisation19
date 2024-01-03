@@ -4,7 +4,7 @@ import tabula
 import requests
 
 class DataExtractor:
-    def __init__(self, engine=None, table_name='legacy_users'):
+    def __init__(self, engine=None, table_name=None):
         # Instantiate a database connector class from database_utils
         self.table_name = table_name
         self.engine = engine
@@ -26,25 +26,55 @@ class DataExtractor:
         combined = pd.concat(dfs, ignore_index=True)
         return combined
     
-    def list_number_of_stores(self, url, headers):
-        response = requests.get(url=url,headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            return data['number_stores']
-        else:
-            print("NOPE")
+    def list_number_of_stores(self, number_of_stores_endpoint,headers):
+        try:
+            # Make a GET request to the API to retrieve the number of stores
+            response = requests.get(url=number_of_stores_endpoint, headers=headers)
+            
+            # Check if the request was successful (status code 200)
+            if response.status_code == 200:
+                data = response.json()
+                number_of_stores = data.get('number_stores')
+                if number_of_stores is not None:
+                    return number_of_stores
+                else:
+                    print("Error: 'number_of_stores' key not found in the response.")
+                    return None
+            else:
+                print(f"Error: Unable to retrieve number of stores. Status Code: {response.status_code}")
+                return None
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+            return None
 
-    def retrieve_store_data(self,url,store_number):
-        x = (f'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/store_details/{store_number}')
-        response = requests.get
-        pass
+    def retrieve_stores_data(self, store_details_endpoint, number_of_stores, headers):
+        try:
+            # Create an empty DataFrame to store store details
+            all_stores_data = pd.DataFrame()
 
+            # Loop through store numbers and retrieve store details
+            for store_number in range(0, number_of_stores):
 
-new = DataExtractor()
-url = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/number_stores'
-headers = {'x-api-key':'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'}
+                #
+                store_url = f'{store_details_endpoint}{store_number}'
+                response = requests.get(url=store_url, headers=headers)
 
-x = new.list_number_of_stores(url=url, headers=headers)
-print(x)
+                # Check if the request was successful (status code 200)
+                if response.status_code == 200:
+                    print("Loading store: "+str(store_number),end="\r",flush=True)
+                    store_data = response.json()
+                    current_store = pd.DataFrame([store_data])
+                    all_stores_data = pd.concat([all_stores_data, current_store], ignore_index=True)
+                else:
+                    print(f"Error retrieving store {store_number}. Status Code: {response.status_code}")
+            print("Data loaded!")
 
+            # Display the DataFrame with all store details
+            print("\nAll Stores Data:")
+            print(all_stores_data)
 
+            return all_stores_data
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+            return None
