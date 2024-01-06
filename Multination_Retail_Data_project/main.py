@@ -2,10 +2,12 @@ import data_extraction as de
 import database_utils as du
 import data_cleaning as dc
 
+
+import pandas as pd
+import boto3
+
 class RunData:
     def __init__(self):
-
-
         #user details database connection for retrieval instance
         self.user_db_connector = du.DatabaseConnector(file_path="db_creds.yaml")
         #PDF file for card details retrieval
@@ -17,12 +19,12 @@ class RunData:
         self.database_cleaner = dc.DataCleaning()
 
         #Database extractor instance
-        self.database_extractor = de.DataExtractor(engine=self.user_db_connector.init_db_engine(), table_name='legacy_users')
-
+        self.database_extractor = de.DataExtractor(engine=self.user_db_connector.init_db_engine())
 
     def clean_user(self):
         print("Starting user extraction and cleaning...\n")
-        db = self.database_extractor.read_rds_table()
+        legacy_users = self.database_extractor.list_db_tables()[1]
+        db = self.database_extractor.read_rds_table(table_name=legacy_users)
         print(db)
         #set the desired database to be cleaned and return cleaned table
         print("Data extracted! Cleaning data...\n")
@@ -32,7 +34,6 @@ class RunData:
         #upload cleaned user data table
         self.upload_db(table=cleaned_user_data,table_name="dim_users")
         print("Success! Cleaned and uploaded as 'dim_users'")
-
 
     def clean_card(self):
         print("Starting card information extraction and cleaning...\n")
@@ -59,7 +60,6 @@ class RunData:
         #Retrieves the number of stores
         print("Retrieving number of stores...\n")
         number_of_stores = self.database_extractor.list_number_of_stores(number_of_stores_endpoint=number_of_stores_endpoint,headers=headers)
-
         print(f"Total number of stores:{number_of_stores} \n")
 
         #Collects all store data
@@ -73,13 +73,32 @@ class RunData:
 
         self.sales_db_connector.upload_to_db(table=db, table_name="dim_store_details")
 
+    def clean_product(self):
+        raw_product_data = self.database_extractor.extract_from_s3("s3://data-handling-public/products.csv")
+        self.database_cleaner.set_data_frame(raw_product_data)
+        standarize_weights = self.database_cleaner.convert_product_weights()
+        self.database_cleaner.set_data_frame(standarize_weights)
+        db = self.database_cleaner.clean_products_data()
+
+        self.sales_db_connector.upload_to_db(table=db, table_name="dim_products")
+
+    def clean_orders(self):
+        order_table = self.database_extractor.list_db_tables()[2]
+        db = self.database_extractor.read_rds_table(table_name=order_table)
+        self.database_cleaner.set_data_frame(db)
+        db = self.database_cleaner.clean_orders_data()
+
+        print(db)
     
+
     def upload_db(self, table, table_name):
         self.sales_db_connector.upload_to_db(table=table,table_name = table_name)
-
-
+        
 if __name__ == "__main__":
     run_data_instance = RunData()
     #run_data_instance.clean_user()
     #run_data_instance.clean_card()
     #run_data_instance.clean_stores()
+    #run_data_instance.clean_product()
+    run_data_instance.clean_orders()
+

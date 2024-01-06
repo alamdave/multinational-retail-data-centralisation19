@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from dateutil.parser import parse
+import re
+#Temp imports
 import data_extraction as de
 import database_utils as du
-from dateutil.parser import parse
+
+import main
 
 class DataCleaning:
     def __init__(self, dataframe=None):
@@ -145,21 +149,69 @@ class DataCleaning:
         self.df["index"] = range(len(self.df))
 
         return self.df
+    def convert_product_weights(self):
+        conversions = {"kg": 1, "g": 1000, "ml": 1000, "oz": 0.0283495, "lb": 0.453592}
+
+        def convert(weight):
+            if isinstance(weight, str) and weight.strip():  # Check if the string is not empty or consists only of whitespace
+                match = re.search(r"[a-zA-Z]+", weight)
+
+                if match:
+                    unit = weight[match.start():]
+                    value_part = weight[:match.start()].strip()  # Extract the numeric part and strip whitespace
+
+                    if value_part:
+                        value = float(value_part)
+
+                        if unit in conversions:
+                            converted_value = value / conversions[unit]
+                            return str(converted_value) + "kg"
+
+            return None
+        
+        self.df["weight"] = self.df["weight"].apply(convert)
+        return self.df
+
+    def clean_products_data(self):
+        self.df = self.df.rename(columns={"Unnamed: 0":"index"})
+        self.df["product_name"] = self.df["product_name"].astype(str)
+
+        self.df["product_price"] = self.df["product_price"].str.replace("£","")
+        self.df["product_price"] = pd.to_numeric(self.df["product_price"], errors="coerce")
+        
+        categories = ['toys-and-games', 'sports-and-leisure', 'pets', 'homeware', 'health-and-beauty', 'food-and-drink', 'diy']
+        self.df["category"] = pd.Categorical(self.df["category"],categories=categories)
+
+        #date
+        self.df["date_added"] = self.df["date_added"].apply(self.date_parsing)
 
 
+        self.df["removed"] = pd.Categorical(self.df["removed"],categories=["Still_avaliable","Removed"])
+
+
+        self.df = self.df.dropna()
+        # Renumber the 'index' column
+        self.df["index"] = range(len(self.df))
+
+        return self.df
+        
+    def clean_orders_data(self):
+        return self.df
 ##temp runner
 if __name__ == "__main__":
     # Initialize database connector and extractor
-    sales_db_connector = du.DatabaseConnector(file_path="sales_data_creds.yaml")
-    database_extractor = de.DataExtractor(engine=sales_db_connector.init_db_engine(), table_name="raw_store_data")
+    #sales_db_connector = du.DatabaseConnector()
+    database_extractor = de.DataExtractor()
 
-    # Extract data from database
-    db = database_extractor.read_rds_table()
+
+
+"""     # Extract data from database
+    db = database_extractor.extract_from_s3("s3://data-handling-public/products.csv")
 
     # Initialize and apply data cleaner
     database_cleaner = DataCleaning()
     database_cleaner.set_data_frame(db)
-    cleaned_data = database_cleaner.clean_store_data()
-
-    # Print the cleaned data
-    print(cleaned_data.tail(12))
+    standarize_weights = database_cleaner.convert_product_weights()
+    database_cleaner.set_data_frame(standarize_weights)
+    cleaned_data = database_cleaner.clean_products_data()
+ """

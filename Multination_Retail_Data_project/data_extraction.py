@@ -2,11 +2,11 @@ from sqlalchemy import inspect
 import pandas as pd
 import tabula
 import requests
+import boto3
 
 class DataExtractor:
-    def __init__(self, engine=None, table_name=None):
+    def __init__(self, engine=None):
         # Instantiate a database connector class from database_utils
-        self.table_name = table_name
         self.engine = engine
 
     # Loads information from YAML file and returns it as a dictionary
@@ -16,9 +16,9 @@ class DataExtractor:
             table_names = inspector.get_table_names()
             return table_names
 
-    def read_rds_table(self):
+    def read_rds_table(self, table_name):
         with self.engine.connect() as conn:
-            df = pd.read_sql_table(self.table_name, conn)
+            df = pd.read_sql_table(table_name, conn)
             return df
         
     def retrieve_pdf_data(self, link):
@@ -78,3 +78,13 @@ class DataExtractor:
         except requests.exceptions.RequestException as e:
             print(f"Error: {e}")
             return None
+    def extract_from_s3(self, address):
+        address_list = address.split("/")
+        client = boto3.client("s3")
+        client.download_file(address_list[2],address_list[3],"local.csv")
+        df = pd.read_csv(filepath_or_buffer="local.csv")
+        return df
+
+
+if __name__=="__main__":
+    pass
