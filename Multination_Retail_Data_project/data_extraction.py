@@ -112,9 +112,6 @@ class DataExtractor:
                     print(f"Error retrieving store {store_number}. Status Code: {response.status_code}")
             print("Data loaded!")
 
-            print("\nAll Stores Data:")
-            print(all_stores_data)
-
             return all_stores_data
         except requests.exceptions.RequestException as e:
             print(f"Error: {e}")

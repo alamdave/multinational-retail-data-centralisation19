@@ -214,7 +214,6 @@ class DataCleaning:
                 "year": "year",
                 "day": "day",
                 "time_period": "period",
-                "date_uuid": "uuid"
             },
             inplace=True,
         )

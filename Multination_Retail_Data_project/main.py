@@ -17,7 +17,6 @@ class RunData:
         print("Data extracted! Cleaning data...\n")
         self.database_cleaner.set_data_frame(db)
         cleaned_user_data = self.database_cleaner.clean_user_data()
-        print(cleaned_user_data)
         self.upload_db(table=cleaned_user_data, table_name="dim_users")
         print("Success! Cleaned and uploaded as 'dim_users'")
 
