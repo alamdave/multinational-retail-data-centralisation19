@@ -3,11 +3,10 @@ import numpy as np
 from datetime import datetime
 from dateutil.parser import parse
 import re
-#Temp imports
+# Temp imports (You may want to remove these if they are not used)
+import database_utils as du
 import data_extraction as de
 import database_utils as du
-
-import main
 
 class DataCleaning:
     def __init__(self, dataframe=None):
@@ -149,6 +148,7 @@ class DataCleaning:
         self.df["index"] = range(len(self.df))
 
         return self.df
+
     def convert_product_weights(self):
         conversions = {"kg": 1, "g": 1000, "ml": 1000, "oz": 0.0283495, "lb": 0.453592}
 
@@ -168,50 +168,81 @@ class DataCleaning:
                             return str(converted_value) + "kg"
 
             return None
-        
+
         self.df["weight"] = self.df["weight"].apply(convert)
         return self.df
 
     def clean_products_data(self):
-        self.df = self.df.rename(columns={"Unnamed: 0":"index"})
+        self.df = self.df.rename(columns={"Unnamed: 0": "index"})
         self.df["product_name"] = self.df["product_name"].astype(str)
 
-        self.df["product_price"] = self.df["product_price"].str.replace("£","")
+        self.df["product_price"] = self.df["product_price"].str.replace("£", "")
         self.df["product_price"] = pd.to_numeric(self.df["product_price"], errors="coerce")
-        
-        categories = ['toys-and-games', 'sports-and-leisure', 'pets', 'homeware', 'health-and-beauty', 'food-and-drink', 'diy']
-        self.df["category"] = pd.Categorical(self.df["category"],categories=categories)
 
-        #date
+        categories = ['toys-and-games', 'sports-and-leisure', 'pets', 'homeware', 'health-and-beauty', 'food-and-drink', 'diy']
+        self.df["category"] = pd.Categorical(self.df["category"], categories=categories)
+
+        # date
         self.df["date_added"] = self.df["date_added"].apply(self.date_parsing)
 
-
-        self.df["removed"] = pd.Categorical(self.df["removed"],categories=["Still_avaliable","Removed"])
-
+        self.df["removed"] = pd.Categorical(self.df["removed"], categories=["Still_avaliable", "Removed"])
 
         self.df = self.df.dropna()
         # Renumber the 'index' column
         self.df["index"] = range(len(self.df))
 
         return self.df
-        
+
     def clean_orders_data(self):
+
+        self.df = self.df.drop(columns=["first_name", "last_name", "1", "level_0"])
+
+        self.df["user_uuid"] = self.df["user_uuid"].astype(str)
+        self.df.loc[self.df["user_uuid"].str.len() != 36, "user_uuid"] = np.nan
+
+        self.df["product_quantity"] = pd.to_numeric(self.df["product_quantity"], errors="coerce")
+
+        self.df = self.df.dropna()
+        # Renumber the 'index' column
+        self.df["index"] = range(len(self.df))
+
         return self.df
-##temp runner
-if __name__ == "__main__":
-    # Initialize database connector and extractor
-    #sales_db_connector = du.DatabaseConnector()
-    database_extractor = de.DataExtractor()
 
+    def clean_date_events_data(self):
 
+        self.df.rename(
+            columns={
+                "timestamp": "time",
+                "month": "month",
+                "year": "year",
+                "day": "day",
+                "time_period": "period",
+                "date_uuid": "uuid"
+            },
+            inplace=True,
+        )
 
-"""     # Extract data from database
-    db = database_extractor.extract_from_s3("s3://data-handling-public/products.csv")
+        self.df["date"] = (self.df["year"] + "-" + self.df["month"] + "-" + self.df["day"]).apply(self.date_parsing)
+        self.df = self.df.dropna()
 
-    # Initialize and apply data cleaner
+        # Extract the time part from the datetime
+        self.df.loc[:,"time"] = pd.to_datetime(self.df["time"], format="%H:%M:%S").dt.time
+
+        self.df.loc[:,"period"] = self.df["period"].str.capitalize()
+        periods = ["Evening", "Morning", "Midday", "Late_hours"]
+        self.df.loc[:,"period"] = pd.Categorical(self.df["period"], categories=periods)
+
+        self.df = self.df.dropna()
+        return self.df
+
+""" if __name__ == "__main__":
+    user_db_connector = du.DatabaseConnector(file_path="db_creds.yaml")
     database_cleaner = DataCleaning()
-    database_cleaner.set_data_frame(db)
-    standarize_weights = database_cleaner.convert_product_weights()
-    database_cleaner.set_data_frame(standarize_weights)
-    cleaned_data = database_cleaner.clean_products_data()
+    database_extractor = de.DataExtractor(engine=user_db_connector.init_db_engine())
+    address = "https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json"
+    raw_date_events = database_extractor.extract_date_events(address=address)
+
+    database_cleaner.set_data_frame(raw_date_events)
+    db = database_cleaner.clean_date_events_data()
+    print(db)
  """
