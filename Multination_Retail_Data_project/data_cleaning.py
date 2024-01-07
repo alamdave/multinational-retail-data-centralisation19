@@ -3,10 +3,7 @@ import numpy as np
 from datetime import datetime
 from dateutil.parser import parse
 import re
-# Temp imports (You may want to remove these if they are not used)
-import database_utils as du
-import data_extraction as de
-import database_utils as du
+
 
 class DataCleaning:
     def __init__(self, dataframe=None):
@@ -234,15 +231,3 @@ class DataCleaning:
 
         self.df = self.df.dropna()
         return self.df
-
-""" if __name__ == "__main__":
-    user_db_connector = du.DatabaseConnector(file_path="db_creds.yaml")
-    database_cleaner = DataCleaning()
-    database_extractor = de.DataExtractor(engine=user_db_connector.init_db_engine())
-    address = "https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json"
-    raw_date_events = database_extractor.extract_date_events(address=address)
-
-    database_cleaner.set_data_frame(raw_date_events)
-    db = database_cleaner.clean_date_events_data()
-    print(db)
- """
