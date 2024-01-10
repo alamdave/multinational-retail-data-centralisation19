@@ -88,9 +88,9 @@ class RunData:
 if __name__ == "__main__":
     run_data_instance = RunData()
 
-    run_data_instance.clean_user()
-    run_data_instance.clean_card()
-    run_data_instance.clean_stores()
-    run_data_instance.clean_product()
-    run_data_instance.clean_orders()
-    run_data_instance.clean_date_events()
+    #run_data_instance.clean_user()
+    #run_data_instance.clean_card()
+    #run_data_instance.clean_stores()
+    #run_data_instance.clean_product()
+    #run_data_instance.clean_orders()
+    #run_data_instance.clean_date_events()

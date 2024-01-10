@@ -26,17 +26,14 @@ class DataCleaning:
     def clean_user_data(self):
         """Clean user data in the DataFrame."""
         # Convert first and last names to string
+        
         self.df["first_name"] = self.df["first_name"].astype(str)
         self.df["last_name"] = self.df["last_name"].astype(str)
 
         # Handle date conversion errors
-        try:
-            self.df["date_of_birth"] = pd.to_datetime(self.df["date_of_birth"], errors="coerce")
-            self.df["join_date"] = pd.to_datetime(self.df["join_date"], errors="coerce")
-        except ValueError as e:
-            print(f"Error converting date columns: {e}")
-            self.df["date_of_birth"] = pd.NaT
-            self.df["join_date"] = pd.NaT
+        self.df["date_of_birth"] = self.df["date_of_birth"].apply(self.date_parsing)
+        self.df["join_date"] = self.df["join_date"].apply(self.date_parsing)
+
 
         # Convert other columns to string
         self.df["company"] = self.df["company"].astype(str)
@@ -49,6 +46,8 @@ class DataCleaning:
         self.df["country_code"] = self.df["country"].replace(country_code_dict)
 
         # Convert country code to categorical type
+        self.df["country"] = pd.Categorical(self.df["country"], categories=["United Kingdom", "United States", "Germany"])
+
         self.df["country_code"] = pd.Categorical(self.df["country_code"], categories=["US", "GB", "GE"])
 
         # Clean phone numbers using regex
@@ -59,45 +58,45 @@ class DataCleaning:
         self.df.loc[self.df["user_uuid"].str.len() != 36, "user_uuid"] = np.nan
 
         # Drop rows with missing values and reset index
-        self.df = self.df.dropna().reset_index(drop=True)
+        self.df = self.df.dropna(subset=["user_uuid","country_code","country","date_of_birth","join_date"])
 
         return self.df
 
     def clean_card_data(self):
         """Clean card data in the DataFrame."""
-        # Drop irrelevant columns
-        self.df = self.df.drop(self.df.columns[[4, 5]], axis=1)
-
-        # Define card lengths for different providers
-        digit_dictionary = {
-            '16 digit': 16, '15 digit': 15, '13 digit': 13, '19 digit': 19,
-            'Diners Club / Carte Blanche': 14, 'Discover': 16, 'American Express': 15, 'Maestro': 12
-        }
-
-        # Map card lengths to 'card_length' column
-        self.df["card_length"] = self.df["card_provider"].apply(lambda x: digit_dictionary.get(x, None))
-        self.df["card_length"] = self.df["card_length"].astype("Int64")
-
         # Clean 'card_provider' column
         remove_strings = [' 16 digit', ' 15 digit', ' 13 digit', ' 19 digit']
         self.df["card_provider"] = self.df["card_provider"].str.replace("|".join(remove_strings), "", regex=True)
         self.df["card_provider"] = self.df["card_provider"].str.upper()
 
-        # Set invalid card numbers to NaN
-        self.df.loc[self.df["card_number"].str.len() != self.df["card_length"], "card_number"] = np.nan
+        # Convert 'expiry_date' to str
+        self.df["expiry_date"] = self.df["expiry_date"].astype(str)
+        self.df["date_payment_confirmed"] = self.df["date_payment_confirmed"].apply(self.date_parsing)
 
-        # Convert 'expiry_date' to datetime format
-        try:
-            self.df["expiry_date"] = pd.to_datetime(self.df["expiry_date"], format="%m/%y", errors="coerce")
-        except ValueError as e:
-            print(f"Error converting 'expiry_date': {e}")
+        self.df["card_number"] = self.df["card_number"].str.replace(r'[^0-9]', '', regex=True)
 
-        # Filter expired cards and drop NaN values
-        current_date = datetime.now()
-        self.df = self.df[self.df["expiry_date"] >= current_date].dropna()
+        # Iterate through rows
+        for index, row in self.df.iterrows():
+            # Extract the "card_number expiry_date" value as a string and remove leading/trailing spaces
+            card_expiry = str(row['card_number expiry_date']).strip()
+            
+            # Check if the value is not empty and is a string
+            if card_expiry and isinstance(row['card_number expiry_date'], str):
+                # Split the value into "card_number" and "expiry_date" using the first space as the partition
+                split_values = card_expiry.split(' ', 1)
+                
+                # Update the DataFrame with the split values
+                self.df.at[index, 'card_number'] = split_values[0]
+                self.df.at[index, 'expiry_date'] = split_values[1]
+       
+       
+        # Drop duplicate card_number values
+        self.df = self.df.drop_duplicates(subset=['card_number'])
+        # Drop null card_number values
+        self.df = self.df.dropna(subset=["card_number","date_payment_confirmed"])
+        # Drop irrelevant columns
+        self.df = self.df.drop(self.df.columns[-2:], axis=1)
 
-        # Reset index
-        self.df = self.df.reset_index(drop=True)
         return self.df
 
     def clean_store_data(self):
@@ -114,7 +113,8 @@ class DataCleaning:
         self.df.rename(columns={"lat": "latitude"}, inplace=True)
 
         # Convert 'staff_numbers' to numeric
-        self.df["staff_numbers"] = pd.to_numeric(self.df["staff_numbers"], errors="coerce").astype("Int32")
+        self.df['staff_numbers'] = self.df['staff_numbers'].str.replace('[^0-9]', '', regex=True)
+        self.df["staff_numbers"] = pd.to_numeric(self.df["staff_numbers"]).astype("Int32")
 
         # Set 'store_type' and 'country_code' as categorical types
         self.df["store_type"] = pd.Categorical(self.df["store_type"], categories=["Web Portal", "Local", "Super Store", "Mall Kiosk", "Outlet"])
@@ -170,7 +170,7 @@ class DataCleaning:
         return self.df
 
     def clean_products_data(self):
-        self.df = self.df.rename(columns={"Unnamed: 0": "index"})
+
         self.df["product_name"] = self.df["product_name"].astype(str)
 
         self.df["product_price"] = self.df["product_price"].str.replace("£", "")
@@ -184,16 +184,15 @@ class DataCleaning:
 
         self.df["removed"] = pd.Categorical(self.df["removed"], categories=["Still_avaliable", "Removed"])
 
-        self.df = self.df.dropna()
-        # Renumber the 'index' column
-        self.df["index"] = range(len(self.df))
+        self.df = self.df.dropna(subset=["category","removed","product_price"])
 
         return self.df
 
     def clean_orders_data(self):
 
         self.df = self.df.drop(columns=["first_name", "last_name", "1", "level_0"])
-
+        
+        self.df["card_number"] = self.df["card_number"].astype(str)
         self.df["user_uuid"] = self.df["user_uuid"].astype(str)
         self.df.loc[self.df["user_uuid"].str.len() != 36, "user_uuid"] = np.nan
 
