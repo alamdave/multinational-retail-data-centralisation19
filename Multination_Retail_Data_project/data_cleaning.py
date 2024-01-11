@@ -64,16 +64,12 @@ class DataCleaning:
 
     def clean_card_data(self):
         """Clean card data in the DataFrame."""
+
+        self.df = pd.read_csv("raw_cards_data.csv")
         # Clean 'card_provider' column
         remove_strings = [' 16 digit', ' 15 digit', ' 13 digit', ' 19 digit']
         self.df["card_provider"] = self.df["card_provider"].str.replace("|".join(remove_strings), "", regex=True)
         self.df["card_provider"] = self.df["card_provider"].str.upper()
-
-        # Convert 'expiry_date' to str
-        self.df["expiry_date"] = self.df["expiry_date"].astype(str)
-        self.df["date_payment_confirmed"] = self.df["date_payment_confirmed"].apply(self.date_parsing)
-
-        self.df["card_number"] = self.df["card_number"].str.replace(r'[^0-9]', '', regex=True)
 
         # Iterate through rows
         for index, row in self.df.iterrows():
@@ -88,14 +84,18 @@ class DataCleaning:
                 # Update the DataFrame with the split values
                 self.df.at[index, 'card_number'] = split_values[0]
                 self.df.at[index, 'expiry_date'] = split_values[1]
-       
-       
+        #remove non numeric charcters from card number       
+        self.df["card_number"] = self.df["card_number"].str.replace(r'[^0-9]', '', regex=True)
         # Drop duplicate card_number values
         self.df = self.df.drop_duplicates(subset=['card_number'])
         # Drop null card_number values
-        self.df = self.df.dropna(subset=["card_number","date_payment_confirmed"])
+        self.df = self.df.dropna(subset=["card_number"])
+        # Convert 'expiry_date' to str
+        self.df["expiry_date"] = self.df["expiry_date"].astype(str)
+        self.df["date_payment_confirmed"] = self.df["date_payment_confirmed"].apply(self.date_parsing)
+        self.df = self.df.dropna(subset=["date_payment_confirmed"])
         # Drop irrelevant columns
-        self.df = self.df.drop(self.df.columns[-2:], axis=1)
+        #self.df = self.df.drop(self.df.columns[-2:], axis=1)
 
         return self.df
 

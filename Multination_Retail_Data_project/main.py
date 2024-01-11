@@ -23,8 +23,9 @@ class RunData:
     def clean_card(self):
         print("Starting card information extraction and cleaning...\n")
         db = self.database_extractor.retrieve_pdf_data(link=self.link)
+        db.to_csv("raw_cards_data.csv", index=False)
         print("Data extracted! Cleaning data...\n")
-        self.database_cleaner.set_data_frame(db)
+        #self.database_cleaner.set_data_frame(db)
         cleaned_card_data = self.database_cleaner.clean_card_data()
         self.upload_db(table=cleaned_card_data, table_name="dim_card_details")
         print("Success! Cleaned and uploaded as 'dim_card_details'")
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     run_data_instance = RunData()
 
     #run_data_instance.clean_user()
-    #run_data_instance.clean_card()
+    run_data_instance.clean_card()
     #run_data_instance.clean_stores()
     #run_data_instance.clean_product()
     #run_data_instance.clean_orders()

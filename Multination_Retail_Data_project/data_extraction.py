@@ -54,6 +54,7 @@ class DataExtractor:
         combined = pd.concat(dfs, ignore_index=True)
         return combined
     
+    
     def list_number_of_stores(self, number_of_stores_endpoint, headers):
         """
         List the number of stores from an API.
