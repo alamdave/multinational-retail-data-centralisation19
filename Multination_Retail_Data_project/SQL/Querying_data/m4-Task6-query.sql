@@ -1,3 +1,10 @@
+/* The company stakeholders want assurances that the company has been doing well recently.
+
+Find which months in which years have had the most sales historically.
+
+The query should return the following information: */
+
+
 WITH MonthlySales AS (
     SELECT
         d.year AS year,

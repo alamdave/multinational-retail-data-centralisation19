@@ -1,3 +1,8 @@
+/* Sales would like the get an accurate metric for how quickly the company is making sales.
+
+Determine the average time taken between each sale grouped by year, the query should return the following information:
+ */
+
 -- CTE 1: Create a table combining day, month, year, and timestamp
 WITH CTE1 AS (
     SELECT year,

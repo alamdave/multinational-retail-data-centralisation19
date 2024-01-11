@@ -1,3 +1,7 @@
+/* The sales team is looking to expand their territory in Germany. Determine which type of store is generating the most sales in Germany.
+
+The query will return: */
+
 SELECT
     ROUND(SUM(o.product_quantity * p.product_price)::numeric, 2) AS total_sales,
     s.store_type,

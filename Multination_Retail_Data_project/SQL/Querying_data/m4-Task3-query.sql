@@ -1,3 +1,5 @@
+/* Query the database to find out which months have produced the most sales. The query should return the following information: */
+
 SELECT
     ROUND(SUM(orders_table.product_quantity * dim_products.product_price)::numeric, 2) AS total_sales,
     dim_date_times.month AS month
